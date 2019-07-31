@@ -31,13 +31,18 @@ start_link() ->
 
 init([]) ->
     {ok, Pools} = application:get_env(workitem, pools),
-    PoolSpec = lists:map(fun ({PoolName, SizeArgs, WorkerArgs}) ->
-        PoolArgs = [{name, {local, PoolName}},
-            {worker_module, workitem_worker}] ++ SizeArgs,
-        poolboy:child_spec(PoolName, PoolArgs, WorkerArgs)
-                         end, Pools),
+    PoolSpec = lists:map(
+        fun ({PoolName, SizeArgs, WorkerArgs}) ->
+            PoolArgs = [{name, {local, PoolName}},
+                {worker_module, workitem_worker}] ++ SizeArgs,
+            poolboy:child_spec(PoolName, PoolArgs, WorkerArgs);
+            (_)->ok
+        end, Pools),
     {ok, { {one_for_one, 10, 10}, PoolSpec} }.
 
+
+
+%% workitem_sup:add_pool(test_pool, [{name, {local, PoolName}}, {worker_module, workitem_worker}, {size, 5}, {max_size, 500}, {max_overflow, 200}], #{})
 add_pool(Name, PoolArgs, WorkerArgs) ->
     ChildSpec = poolboy:child_spec(Name, PoolArgs, WorkerArgs),
     supervisor:start_child(?MODULE, ChildSpec).
