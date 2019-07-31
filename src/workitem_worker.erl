@@ -31,6 +31,25 @@
 
 -include("wi.hrl").
 
+
+middle_man_transaction(Pool, Fun, Timeout) ->
+  Tag = make_ref(),
+  {Receiver, Ref} = erlang:spawn_monitor(
+    fun() ->
+      process_flag(trap_exit, true),
+      Result = poolboy:transaction(Pool, Fun,
+        Timeout),
+      exit({self(),Tag,Result})
+    end),
+  receive
+    {'DOWN', Ref, _, _, {Receiver, Tag, Result}} ->
+      Result;
+    {'DOWN', Ref, _, _, {timeout, _}} ->
+      {error, timeout};
+    {'DOWN', Ref, _, _, Reason} ->
+      {error, Reason}
+  end.
+
 %%%===================================================================
 %%% API
 %%%===================================================================
@@ -190,7 +209,7 @@ cast_on(PoolName, Fun, Timeout)->
 %%%===================================================================
 % put to queue and wait for return: the message queue of working process must be empty
 call(PoolName, Fun, Timeout)->
-  poolboy_util:middle_man_transaction(PoolName,
+  middle_man_transaction(PoolName,
     fun (W) ->
       gen_server:call(W, {do, Fun}, Timeout)
     end, Timeout).
@@ -198,7 +217,7 @@ call(PoolName, Fun, Timeout)->
 %%%===================================================================
 % put to queue and wait for return: the message queue of working process must be empty
 call_on(PoolName, Fun, Timeout)->
-  poolboy_util:middle_man_transaction(PoolName,
+  middle_man_transaction(PoolName,
     fun (W) ->
       gen_server:call(W, {on, Fun}, Timeout)
     end, Timeout).
