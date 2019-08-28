@@ -149,6 +149,8 @@ handle_call({on, Fun}, _From, State) ->
     NewState ->
       {reply, noreply, NewState}
   end;
+handle_call(Request, From, State = #{handle := MFA}) ->
+  handle_X(MFA, call, {Request, From}, State);
 handle_call(_Request, _From, State) ->
   {reply, ok, State}.
 
@@ -169,11 +171,23 @@ handle_cast({on, Fun}, State) ->
     NewState ->
       {noreply, NewState}
   end;
+handle_cast(Info, State = #{handle := MFA}) ->
+  handle_X(MFA, cast, Info, State);
 handle_cast(_Request, State) ->
   {noreply, State}.
 
+handle_info(Info, State = #{handle := MFA}) ->
+  handle_X(MFA, info, Info, State);
+%%  M:F(info, Info, State, A);
+%%  {noreply, State};
 handle_info(_Info, State) ->
   {noreply, State}.
+
+
+handle_X({M,F,A}, X, What, State)->
+  M:F(X, What, State, A);
+handle_X({M,F}, X, What, State)->
+  M:F(X, What, State).
 
 
 terminate(_Reason, _State) ->
