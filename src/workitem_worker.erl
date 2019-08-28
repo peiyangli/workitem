@@ -150,7 +150,15 @@ handle_call({on, Fun}, _From, State) ->
       {reply, noreply, NewState}
   end;
 handle_call(Request, From, State = #{handle := MFA}) ->
-  handle_X(MFA, call, {Request, From}, State);
+  case handle_X(MFA, call, {Request, From}, State) of
+    {ok, Reply, NewState}->
+      {reply, Reply, NewState};
+    {ok, NewState}->
+      {reply, ok, NewState};
+    ok->
+      {reply, ok, State};
+    What->What
+  end;
 handle_call(_Request, _From, State) ->
   {reply, ok, State}.
 
@@ -172,12 +180,28 @@ handle_cast({on, Fun}, State) ->
       {noreply, NewState}
   end;
 handle_cast(Info, State = #{handle := MFA}) ->
-  handle_X(MFA, cast, Info, State);
+  case handle_X(MFA, cast, Info, State) of
+    {ok, _Reply, NewState}->
+      {noreply, NewState};
+    {ok, NewState}->
+      {noreply, NewState};
+    ok->
+      {noreply, State};
+    What->What
+  end;
 handle_cast(_Request, State) ->
   {noreply, State}.
 
 handle_info(Info, State = #{handle := MFA}) ->
-  handle_X(MFA, info, Info, State);
+  case handle_X(MFA, info, Info, State) of
+    {ok, _Reply, NewState}->
+      {noreply, NewState};
+    {ok, NewState}->
+      {noreply, NewState};
+    ok->
+      {noreply, State};
+    What->What
+  end;
 %%  M:F(info, Info, State, A);
 %%  {noreply, State};
 handle_info(_Info, State) ->
@@ -187,7 +211,8 @@ handle_info(_Info, State) ->
 handle_X({M,F,A}, X, What, State)->
   M:F(X, What, State, A);
 handle_X({M,F}, X, What, State)->
-  M:F(X, What, State).
+  M:F(X, What, State);
+handle_X(_,_,_,_)->ok.
 
 
 terminate(_Reason, _State) ->
