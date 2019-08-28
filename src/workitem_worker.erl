@@ -153,8 +153,8 @@ handle_call(Request, From, State = #{handle := MFA}) ->
   case handle_X(MFA, call, {Request, From}, State) of
     {ok, Reply, NewState}->
       {reply, Reply, NewState};
-    {ok, NewState}->
-      {reply, ok, NewState};
+    {Reply, NewState}->
+      {reply, Reply, NewState};
     ok->
       {reply, ok, State};
     What->What
@@ -183,7 +183,7 @@ handle_cast(Info, State = #{handle := MFA}) ->
   case handle_X(MFA, cast, Info, State) of
     {ok, _Reply, NewState}->
       {noreply, NewState};
-    {ok, NewState}->
+    {_Reply, NewState}->
       {noreply, NewState};
     ok->
       {noreply, State};
@@ -196,7 +196,7 @@ handle_info(Info, State = #{handle := MFA}) ->
   case handle_X(MFA, info, Info, State) of
     {ok, _Reply, NewState}->
       {noreply, NewState};
-    {ok, NewState}->
+    {_Reply, NewState}->
       {noreply, NewState};
     ok->
       {noreply, State};
