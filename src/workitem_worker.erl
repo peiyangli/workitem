@@ -133,10 +133,17 @@ call_fun(Fun, State)when is_function(Fun, 1)->
 %%  end.
 
 
-handle_call({do, Fun}, _From, State) ->
+handle_call(A,From,State)->
+  try
+    handle_call_1(A,From,State)
+  catch
+      E:W ->{reply, {error, {E, W}}, State}
+  end.
+
+handle_call_1({do, Fun}, _From, State) ->
   Reply = call_fun(Fun),
   {reply, Reply, State};
-handle_call({on, Fun}, _From, State) ->
+handle_call_1({on, Fun}, _From, State) ->
   case call_fun(Fun, State) of
     {reply, Reply}->
       {reply, Reply, State};
@@ -149,7 +156,7 @@ handle_call({on, Fun}, _From, State) ->
     NewState ->
       {reply, noreply, NewState}
   end;
-handle_call(Request, From, State = #{handle := MFA}) ->
+handle_call_1(Request, From, State = #{handle := MFA}) ->
   case handle_X(MFA, call, {Request, From}, State) of
     {ok, Reply, NewState}->
       {reply, Reply, NewState};
@@ -159,14 +166,20 @@ handle_call(Request, From, State = #{handle := MFA}) ->
       {reply, ok, State};
     What->What
   end;
-handle_call(_Request, _From, State) ->
+handle_call_1(_Request, _From, State) ->
   {reply, ok, State}.
 
+handle_cast(E, State)->
+  try
+    handle_cast_1(E,State)
+  catch
+    _E:_W ->{noreply, State}
+  end.
 
-handle_cast({do, Fun}, State) ->
+handle_cast_1({do, Fun}, State) ->
   call_fun(Fun),
   {noreply, State};
-handle_cast({on, Fun}, State) ->
+handle_cast_1({on, Fun}, State) ->
   case call_fun(Fun, State) of
     {reply, _Reply}->
       {noreply, State};
@@ -179,7 +192,7 @@ handle_cast({on, Fun}, State) ->
     NewState ->
       {noreply, NewState}
   end;
-handle_cast(Info, State = #{handle := MFA}) ->
+handle_cast_1(Info, State = #{handle := MFA}) ->
   case handle_X(MFA, cast, Info, State) of
     {ok, _Reply, NewState}->
       {noreply, NewState};
@@ -189,10 +202,18 @@ handle_cast(Info, State = #{handle := MFA}) ->
       {noreply, State};
     What->What
   end;
-handle_cast(_Request, State) ->
+handle_cast_1(_Request, State) ->
   {noreply, State}.
 
-handle_info(Info, State = #{handle := MFA}) ->
+
+handle_info(Info, State)->
+  try
+    handle_info_1(Info,State)
+  catch
+    _E:_W ->{noreply, State}
+  end.
+
+handle_info_1(Info, State = #{handle := MFA}) ->
   case handle_X(MFA, info, Info, State) of
     {ok, _Reply, NewState}->
       {noreply, NewState};
@@ -204,7 +225,7 @@ handle_info(Info, State = #{handle := MFA}) ->
   end;
 %%  M:F(info, Info, State, A);
 %%  {noreply, State};
-handle_info(_Info, State) ->
+handle_info_1(_Info, State) ->
   {noreply, State}.
 
 
